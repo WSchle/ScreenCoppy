@@ -161,6 +161,7 @@
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="Source\OCR\ocr.h" />
+    <ClInclude Include="Source\Sampler\sampler.h" />
     <ClInclude Include="Source\UI\ui.h" />
   </ItemGroup>
   <ItemGroup>
@@ -172,6 +173,7 @@
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\OCR\ocr.cpp" />
+    <ClCompile Include="Source\Sampler\sampler.cpp" />
     <ClCompile Include="Source\UI\ui.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

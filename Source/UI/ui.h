@@ -3,10 +3,11 @@
 #include <memory>
 #include <d3d11.h>
 
-
 #include "../../ImGui/imgui.h"
 #include "../../ImGui/imgui_impl_win32.h"
 #include "../../ImGui/imgui_impl_dx11.h"
+
+#include "../Sampler/sampler.h"
 
 class ui
 {
@@ -23,6 +24,7 @@ class ui
 	bool                     SwapChainOccluded = false;
 	
 	ID3D11RenderTargetView*  mainRenderTargetView = nullptr;
+	PixelSampler* pixelSampler = nullptr;
 
 	bool CreateDeviceD3D(HWND hWnd);
 	void CleanupDeviceD3D();

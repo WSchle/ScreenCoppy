@@ -34,6 +34,7 @@ inline std::string& trim(std::string& s, const char* t = ws)
 std::vector<unsigned char> CaptureScreenRect(int x, int y, int width, int height)
 {
     UI->resetWindow();
+    
 
     HDC screenDC = GetDC(NULL);
     HDC memDC = CreateCompatibleDC(screenDC);
@@ -127,6 +128,8 @@ ui::ui()
     ImGui_ImplWin32_Init(hWnd);
     ImGui_ImplDX11_Init(pd3dDevice, pd3dDeviceContext);
 
+	pixelSampler = new PixelSampler();
+
     RegisterHotKey(hWnd, 1, MOD_CONTROL | MOD_SHIFT, 'S');
     RegisterHotKey(hWnd, 2, 0, VK_ESCAPE);
 }
@@ -184,26 +187,47 @@ void ui::resetWindow()
 
 void ui::drawDottedRect(ImVec2 topLeft, ImVec2 bottomRight)
 {
-    ImU32 color = IM_COL32(255, 255, 255, 200);
+    ImU32 light = IM_COL32(255, 255, 255, 200);
+    ImU32 dark = IM_COL32(0, 0, 0, 200);
     float spacing = 4.0f;
 
     ImDrawList* drawList = ImGui::GetForegroundDrawList();
 
     // Top edge
     for (float x = topLeft.x; x < bottomRight.x; x += spacing * 2)
+    {
+        int lum = pixelSampler->GetLuminanceAt((int)x, (int)topLeft.y + 1);
+        ImU32 color = (lum >= 0 && lum < 128) ? light : dark;
         drawList->AddLine(ImVec2(x, topLeft.y), ImVec2(min(bottomRight.x, x + spacing), topLeft.y), color, 2.f);
+
+    }
 
     // Bottom edge
     for (float x = topLeft.x; x < bottomRight.x; x += spacing * 2)
+    {
+        int lum = pixelSampler->GetLuminanceAt((int)x, (int)bottomRight.y - 1);
+        ImU32 color = (lum >= 0 && lum < 128) ? light : dark;
         drawList->AddLine(ImVec2(x, bottomRight.y), ImVec2(min(bottomRight.x, x + spacing), bottomRight.y), color, 2.f);
+
+    }
 
     // Left edge
     for (float y = topLeft.y; y < bottomRight.y; y += spacing * 2)
+    {
+        int lum = pixelSampler->GetLuminanceAt((int)topLeft.x + 1, (int)y);
+        ImU32 color = (lum >= 0 && lum < 128) ? light : dark;
         drawList->AddLine(ImVec2(topLeft.x, y), ImVec2(topLeft.x, min(bottomRight.y, y + spacing)), color, 2.f);
+
+    }
 
     // Right edge
     for (float y = topLeft.y; y < bottomRight.y; y += spacing * 2)
+    {
+        int lum = pixelSampler->GetLuminanceAt((int)bottomRight.x - 1, (int)y);
+        ImU32 color = (lum >= 0 && lum < 128) ? light : dark;
         drawList->AddLine(ImVec2(bottomRight.x, y), ImVec2(bottomRight.x, min(bottomRight.y, y + spacing)), color, 2.f);
+
+    }
 }
 
 void ui::drawSelection()
@@ -230,6 +254,7 @@ void ui::drawSelection()
             break;
 
         handleMouse();
+        
 
         if ((SwapChainOccluded && pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED))
         {
@@ -237,6 +262,10 @@ void ui::drawSelection()
             continue;
         }
         SwapChainOccluded = false;
+
+        const float clear_color_with_alpha[4] = { 0.05f, 0.05f, 0.05f, 0.1f }; // fully transparent
+        pd3dDeviceContext->OMSetRenderTargets(1, &mainRenderTargetView, nullptr);
+        pd3dDeviceContext->ClearRenderTargetView(mainRenderTargetView, clear_color_with_alpha);            
 
         if (ResizeWidth != 0 && ResizeHeight != 0)
         {
@@ -255,15 +284,16 @@ void ui::drawSelection()
                 ImVec2 topLeft = ImVec2(min(dragStart.x, dragEnd.x), min(dragStart.y, dragEnd.y));
                 ImVec2 bottomRight = ImVec2(max(dragStart.x, dragEnd.x), max(dragStart.y, dragEnd.y));
                 
+                if (pixelSampler)
+                    pixelSampler->Update(topLeft, bottomRight);
+
                 drawDottedRect(topLeft, bottomRight);
             }
         }
 
         ImGui::Render();
         //const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-        const float clear_color_with_alpha[4] = { 0.05f, 0.05f, 0.05f, 0.1f }; // fully transparent
-        pd3dDeviceContext->OMSetRenderTargets(1, &mainRenderTargetView, nullptr);
-        pd3dDeviceContext->ClearRenderTargetView(mainRenderTargetView, clear_color_with_alpha);
+
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
         // Present
@@ -285,6 +315,9 @@ ui::~ui()
     ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
     UnregisterHotKey(hWnd, 1);
     UnregisterHotKey(hWnd, 2);
+
+	if (pixelSampler)
+        delete pixelSampler;
 }
 
 bool ui::CreateDeviceD3D(HWND hWnd)

@@ -13,6 +13,9 @@
     <Filter Include="Source\OCR">
       <UniqueIdentifier>{0ebc4ec3-6b38-4a16-95c4-2418472f3070}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Sampler">
+      <UniqueIdentifier>{3bfac0a2-2067-404a-92c4-3758dcc98896}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGui\imconfig.h">
@@ -45,6 +48,7 @@
     <ClInclude Include="Source\OCR\ocr.h">
       <Filter>Source\OCR</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Sampler\sampler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -74,5 +78,6 @@
     <ClCompile Include="Source\OCR\ocr.cpp">
       <Filter>Source\OCR</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Sampler\sampler.cpp" />
   </ItemGroup>
 </Project>
