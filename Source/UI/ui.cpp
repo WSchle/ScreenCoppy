@@ -102,7 +102,8 @@ ui::ui()
 
 	wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr,  nullptr,  nullptr, L"Test", nullptr };
 	::RegisterClassEx(&wc);
-	hWnd = ::CreateWindowExW(WS_EX_OVERLAPPEDWINDOW | WS_EX_TOPMOST | WS_EX_TRANSPARENT, wc.lpszClassName, L"ScreenCoppyOverlay", WS_MAXIMIZE | WS_POPUP, 0, 0, screenWidth * dpiScale[0], screenHeight * dpiScale[0], NULL, NULL, wc.hInstance, NULL);
+
+	hWnd = ::CreateWindowExW(WS_EX_OVERLAPPEDWINDOW | WS_EX_TOPMOST | WS_EX_TRANSPARENT, wc.lpszClassName, L"ScreenCoppyOverlay", WS_MAXIMIZE | WS_POPUP, vScreenX, vScreenY, vScreenWidth, vScreenHeight, NULL, NULL, wc.hInstance, NULL);
 
     if (!CreateDeviceD3D(hWnd))
     {
@@ -121,8 +122,6 @@ ui::ui()
     
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
-    style.ScaleAllSizes(dpiScale[0]);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-    style.FontScaleDpi = dpiScale[0];        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hWnd);
@@ -138,11 +137,15 @@ void ui::handleMouse()
 {
     ImGuiIO& io = ImGui::GetIO();
 
+    POINT pt;
+    GetCursorPos(&pt);
+    
+
     if (ImGui::IsMouseClicked(0) && !ImGui::GetIO().WantCaptureMouse)
     {
         isSelecting = true;
-        dragStart = io.MousePos;
-        dragEnd = io.MousePos;
+        dragStart = ImVec2((float)pt.x, (float)pt.y);
+        dragEnd = ImVec2((float)pt.x, (float)pt.y);
     }
     else if (ImGui::IsMouseReleased(0))
     {
@@ -172,7 +175,7 @@ void ui::handleMouse()
 
     if (isSelecting)
     {
-        dragEnd = io.MousePos;
+        dragEnd = ImVec2((float)pt.x, (float)pt.y);
     }
 }
 
@@ -192,11 +195,15 @@ void ui::drawDottedRect(ImVec2 topLeft, ImVec2 bottomRight)
     float spacing = 4.0f;
 
     ImDrawList* drawList = ImGui::GetForegroundDrawList();
+    RECT rect;
+    GetWindowRect(hWnd, &rect);
+    int windowX = rect.left;
+    int windowY = rect.top;
 
     // Top edge
     for (float x = topLeft.x; x < bottomRight.x; x += spacing * 2)
     {
-        int lum = pixelSampler->GetLuminanceAt((int)x, (int)topLeft.y + 1);
+        int lum = pixelSampler->GetLuminanceWindowRelative((int)x, (int)topLeft.y + 1, windowX, windowY);
         ImU32 color = (lum >= 0 && lum < 128) ? light : dark;
         drawList->AddLine(ImVec2(x, topLeft.y), ImVec2(min(bottomRight.x, x + spacing), topLeft.y), color, 2.f);
 
@@ -205,7 +212,7 @@ void ui::drawDottedRect(ImVec2 topLeft, ImVec2 bottomRight)
     // Bottom edge
     for (float x = topLeft.x; x < bottomRight.x; x += spacing * 2)
     {
-        int lum = pixelSampler->GetLuminanceAt((int)x, (int)bottomRight.y - 1);
+        int lum = pixelSampler->GetLuminanceWindowRelative((int)x, (int)bottomRight.y - 1, windowX, windowY);
         ImU32 color = (lum >= 0 && lum < 128) ? light : dark;
         drawList->AddLine(ImVec2(x, bottomRight.y), ImVec2(min(bottomRight.x, x + spacing), bottomRight.y), color, 2.f);
 
@@ -214,7 +221,7 @@ void ui::drawDottedRect(ImVec2 topLeft, ImVec2 bottomRight)
     // Left edge
     for (float y = topLeft.y; y < bottomRight.y; y += spacing * 2)
     {
-        int lum = pixelSampler->GetLuminanceAt((int)topLeft.x + 1, (int)y);
+        int lum = pixelSampler->GetLuminanceWindowRelative((int)topLeft.x + 1, (int)y, windowX, windowY);
         ImU32 color = (lum >= 0 && lum < 128) ? light : dark;
         drawList->AddLine(ImVec2(topLeft.x, y), ImVec2(topLeft.x, min(bottomRight.y, y + spacing)), color, 2.f);
 
@@ -223,7 +230,7 @@ void ui::drawDottedRect(ImVec2 topLeft, ImVec2 bottomRight)
     // Right edge
     for (float y = topLeft.y; y < bottomRight.y; y += spacing * 2)
     {
-        int lum = pixelSampler->GetLuminanceAt((int)bottomRight.x - 1, (int)y);
+        int lum = pixelSampler->GetLuminanceWindowRelative((int)bottomRight.x - 1, (int)y, windowX, windowY);
         ImU32 color = (lum >= 0 && lum < 128) ? light : dark;
         drawList->AddLine(ImVec2(bottomRight.x, y), ImVec2(bottomRight.x, min(bottomRight.y, y + spacing)), color, 2.f);
 
@@ -281,11 +288,21 @@ void ui::drawSelection()
         {
             if (!(dragStart.x == -1) && !(dragStart.y == -1) && !(dragEnd.x == -1) && !(dragEnd.y == -1))
             {
+                RECT rect;
+                GetWindowRect(hWnd, &rect);
+                int windowX = rect.left;
+                int windowY = rect.top;
+
                 ImVec2 topLeft = ImVec2(min(dragStart.x, dragEnd.x), min(dragStart.y, dragEnd.y));
                 ImVec2 bottomRight = ImVec2(max(dragStart.x, dragEnd.x), max(dragStart.y, dragEnd.y));
-                
+
                 if (pixelSampler)
                     pixelSampler->Update(topLeft, bottomRight);
+
+                topLeft.x -= windowX;
+                topLeft.y -= windowY;
+                bottomRight.x -= windowX;
+                bottomRight.y -= windowY;
 
                 drawDottedRect(topLeft, bottomRight);
             }

@@ -15,6 +15,10 @@ class ui
 	float					 dpiScale[2] = { 0.0f, 0.0f };
 	int						 screenWidth = GetSystemMetrics(SM_CXSCREEN);
 	int						 screenHeight = GetSystemMetrics(SM_CYSCREEN);
+	int						 vScreenX = GetSystemMetrics(SM_XVIRTUALSCREEN);
+	int						 vScreenY = GetSystemMetrics(SM_YVIRTUALSCREEN);
+	int						 vScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+	int						 vScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 	ImVec4					 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 	WNDCLASSEXW				 wc;
